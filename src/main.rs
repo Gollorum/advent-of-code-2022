@@ -1,3 +1,8 @@
+extern crate core;
+
+mod day01;
+mod utils;
+
 fn main() {
-    println!("Hello, world!");
+    day01::run_actual();
 }
