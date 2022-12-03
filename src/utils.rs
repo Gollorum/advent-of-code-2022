@@ -8,3 +8,13 @@ where P: AsRef<Path>, {
     let file = File::open(path)?;
     Ok(io::BufReader::new(file).lines())
 }
+
+pub(crate) struct ErrorMsg {
+    pub(crate) wrapped: String
+}
+
+impl From<io::Error> for ErrorMsg {
+    fn from(err: io::Error) -> Self {
+       ErrorMsg { wrapped: format!("IO error: {}", err.to_string()) }
+    }
+}
