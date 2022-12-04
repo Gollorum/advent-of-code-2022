@@ -4,19 +4,13 @@ use crate::utils;
 use crate::utils::ErrorMsg;
 
 pub fn run_sample() {
-    print(run("input/day03_sample.txt"));
+    ErrorMsg::print(run("input/day03_sample.txt"));
 }
 
 pub fn run_actual() {
-    print(run("input/day03.txt"));
+    ErrorMsg::print(run("input/day03.txt"));
 }
 
-fn print(result: Result<(), ErrorMsg>) -> () {
-    match result {
-        Ok(val) => val,
-        Err(err) => println!("Error: {}", err.wrapped)
-    }
-}
 
 fn priority_from(c: char) -> Result<u32, char> {
     match c {
