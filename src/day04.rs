@@ -14,9 +14,9 @@ fn run(path: &str) -> Result<(), ErrorMsg> {
     let lines = utils::read_lines(path)?;
     let mut num_contained = 0;
     let mut num_overlaps = 0;
+    let re = Regex::new(r"(\d+)-(\d+),(\d+)-(\d+)")?;
     for line_r in lines {
         let line = line_r?;
-        let re = Regex::new(r"(\d+)-(\d+),(\d+)-(\d+)").unwrap();
         let captures = re.captures(line.as_str()).ok_or(ErrorMsg{wrapped: "Regex failed".to_string()})?;
         let left = (captures[1].parse::<u32>()?, captures[2].parse::<u32>()?);
         let right = (captures[3].parse::<u32>()?, captures[4].parse::<u32>()?);

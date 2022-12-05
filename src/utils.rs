@@ -3,6 +3,7 @@ use std::io;
 use std::io::BufRead;
 use std::num::ParseIntError;
 use std::path::Path;
+use regex::Regex;
 
 pub(crate) fn read_lines<P>(path: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where P: AsRef<Path>, {
@@ -31,5 +32,10 @@ impl From<io::Error> for ErrorMsg {
 impl From<ParseIntError> for ErrorMsg {
     fn from(err: ParseIntError) -> Self {
        ErrorMsg { wrapped: format!("ParseIntError: {}", err.to_string()) }
+    }
+}
+impl From<regex::Error> for ErrorMsg {
+    fn from(err: regex::Error) -> Self {
+       ErrorMsg { wrapped: format!("Failed to compile regex: {}", err.to_string()) }
     }
 }

@@ -9,6 +9,7 @@ mod utils;
 mod day02;
 mod day03;
 mod day04;
+mod day05;
 
 fn main() {
     // day01::run_sample();
@@ -18,5 +19,7 @@ fn main() {
     // day03::run_sample();
     // day03::run_actual();
     // day04::run_sample();
-    day04::run_actual();
+    // day04::run_actual();
+    // day05::run_sample();
+    day05::run_actual();
 }
