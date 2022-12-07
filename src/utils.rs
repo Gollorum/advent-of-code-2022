@@ -22,6 +22,9 @@ impl ErrorMsg {
             Err(err) => println!("Error: {}", err.wrapped)
         }
     }
+    pub(crate) fn new(string: &str) -> ErrorMsg {
+        ErrorMsg { wrapped: string.to_string() }
+    }
 }
 
 impl From<io::Error> for ErrorMsg {
