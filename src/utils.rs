@@ -3,12 +3,16 @@ use std::io;
 use std::io::BufRead;
 use std::num::ParseIntError;
 use std::path::Path;
-use regex::Regex;
 
 pub(crate) fn read_lines<P>(path: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where P: AsRef<Path>, {
     let file = File::open(path)?;
     Ok(io::BufReader::new(file).lines())
+}
+
+pub(crate) fn read_lines_to_vec<P>(path: P) -> Result<Vec<String>,std::io::Error>
+where P: AsRef<Path>, {
+    Ok(read_lines(path)?.collect::<Result<Vec<String>,std::io::Error>>()?)
 }
 
 pub(crate) struct ErrorMsg {
