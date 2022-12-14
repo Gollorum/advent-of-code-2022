@@ -1,6 +1,5 @@
 use std::cmp::{max, min};
 use std::collections::HashSet;
-use crate::utils;
 use crate::utils::{ErrorMsg, read_lines};
 
 pub fn run_sample_1() {

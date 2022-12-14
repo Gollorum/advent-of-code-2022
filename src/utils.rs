@@ -46,3 +46,13 @@ impl From<regex::Error> for ErrorMsg {
        ErrorMsg { wrapped: format!("Failed to compile regex: {}", err.to_string()) }
     }
 }
+impl From<String> for ErrorMsg {
+    fn from(err: String) -> Self {
+       ErrorMsg { wrapped: err }
+    }
+}
+impl From<&str> for ErrorMsg {
+    fn from(err: &str) -> Self {
+       ErrorMsg { wrapped: err.to_string() }
+    }
+}

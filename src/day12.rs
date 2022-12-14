@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
-use std::thread::sleep;
 use crate::utils;
 use crate::utils::ErrorMsg;
 

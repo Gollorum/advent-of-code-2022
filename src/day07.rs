@@ -1,7 +1,4 @@
 use std::collections::HashMap;
-use std::ffi::c_int;
-use std::io::{BufReader, Lines};
-use std::iter::Map;
 use crate::day07::Element::{Directory, File};
 use crate::utils;
 use crate::utils::ErrorMsg;
