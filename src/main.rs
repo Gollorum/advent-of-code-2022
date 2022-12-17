@@ -55,6 +55,6 @@ fn main() {
     // day14::run_actual();
     // day15::run_sample();
     // day15::run_actual();
-    day16::run_sample();
-    // day16::run_actual();
+    // day16::run_sample();
+    day16::run_actual();
 }
