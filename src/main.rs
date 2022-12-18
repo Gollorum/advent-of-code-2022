@@ -60,7 +60,7 @@ fn main() {
     // day16::run_sample();
     // day16::run_actual();
     // day17::run_sample();
-    // day17::run_actual();
+    day17::run_actual();
     // day18::run_sample();
-    day18::run_actual();
+    // day18::run_actual();
 }
