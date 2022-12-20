@@ -1,10 +1,10 @@
-use std::cmp::min;
+use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::str::FromStr;
 use crate::utils::ErrorMsg;
 use regex::Regex;
 use crate::utils;
-use pariter::IteratorExt;
+use itertools::Itertools;
 
 pub fn run_sample() {
     ErrorMsg::print(run("input/day16_sample.txt"));
@@ -77,6 +77,33 @@ fn max_pressure_for(
     }).max().unwrap_or(minutes_left * current_flow)
 }
 
+fn eval_permutation(
+    nodes: &Vec<(&Node, Vec<u32>)>,
+    permutation_cache: &mut Vec<Option<(u32, u32, u32)>>,
+    permutation: u64,
+    max_time: u32
+) -> (u32, u32, u32) {
+    if let Some(res) = permutation_cache[permutation as usize] {
+        return res;
+    }
+    let prev_permutation = permutation >> 4;
+    let (prev_time, prev_press, prev_final_flow) = eval_permutation(nodes, permutation_cache, prev_permutation, max_time);
+    let last_index = permutation & 0b1111;
+    let node = nodes[last_index as usize].0;
+    let prev_last_index = (prev_permutation & 0b1111) as usize;
+    let cost_to_last = nodes[prev_last_index].1[last_index as usize];
+    let time = prev_time + cost_to_last;
+    let pressure = prev_press + cost_to_last * prev_final_flow;
+    let final_flow = prev_final_flow + node.flow_rate;
+    let res = if time > max_time {
+        (max_time, prev_press + prev_final_flow * (max_time-prev_time), prev_final_flow)
+    } else {
+        (time, pressure, final_flow)
+    };
+    permutation_cache[permutation as usize] = Some(res);
+    res
+}
+
 fn max_pressure_for_two(
     edges: &HashMap<String,HashMap<String,u32>>,
     nodes: &HashMap<String, &Node>,
@@ -110,7 +137,7 @@ fn to_str(edges: &HashMap<String,HashMap<String,u32>>) -> String {
 fn run(path: &str) -> Result<(), ErrorMsg> {
     let all_nodes = utils::read_lines(path)?.map(|l| l?.parse::<Node>())
         .collect::<Result<Vec<Node>, ErrorMsg>>()?;
-    let nodes_map = all_nodes.iter().map(|n| (n.id.clone(), n)).collect();
+    let nodes_map: HashMap<String, &Node> = all_nodes.iter().map(|n| (n.id.clone(), n)).collect();
     let mut edges: HashMap<String,HashMap<String,u32>> = all_nodes.iter().map(|n| (n.id.clone(), n.tunnels.iter().map(|s| (s.clone(), 1u32)).collect())).collect();
     println!("All edges: {}", to_str(&edges));
     for _ in 0..all_nodes.len() {
@@ -143,17 +170,32 @@ fn run(path: &str) -> Result<(), ErrorMsg> {
     // TODO DS: Cache max pressure for subgroup / subset?
     println!("All edges: {}", to_str(&edges));
     // let total_pressure = max_pressure_for(&edges, &nodes_map, "AA", 0, 30);
-    let edges_with_indices = edges.iter().enumerate().collect::<Vec<_>>();
-    let a_i = edges_with_indices.iter().find(|e|e.1.0 == "AA").unwrap().0;
-    let total_pressure =
-        // {
-        (0..(1 << edges.len())).filter(|i|(i & (1<<a_i)) == 0).map(|i| {
-            max_pressure_for(&edges_with_indices.iter().filter(|(ii,e)| e.0 == "AA" || (i & (1<<ii)) == 0).map(|(_,e)|(e.0.clone(), e.1.clone())).collect(), &nodes_map, "AA", 0, 26) +
-                max_pressure_for(&edges_with_indices.iter().filter(|(ii,e)| e.0 == "AA" || (i & (1<<ii)) != 0).map(|(_,e)|(e.0.clone(), e.1.clone())).collect(), &nodes_map, "AA", 0, 26)
-        }).max().unwrap()
-    //     max_pressure_for_two(&edges, &nodes_map, ("AA", "AA"), (0, 0), (26, 26))
-    // }
-        ;
+    let mut sorted_nodes = edges.iter().map(|(name, _)| name).collect::<Vec<_>>();
+    sorted_nodes.sort();
+    let sorted_edges: Vec<(&Node,Vec<u32>)> = sorted_nodes.iter().enumerate().map(|(i, &name)| (
+        nodes_map[name],
+        sorted_nodes.iter().enumerate().filter(|&(ii,_)| i != ii).map(|(_,&n)| edges[name][n]).collect()
+    )).collect();
+    let mut cache = vec![None; 1 << edges.len()];
+    cache[0] = Some((0,0,0));
+    let total_pressure = (1..sorted_edges.len()).permutations(sorted_edges.len()-1)
+        .map(|p_list| eval_permutation(
+            &sorted_edges,
+            &mut cache,
+            p_list.iter().fold(0, |accum, now| accum << 4 | *now as u64),
+            26
+        ).1).max().unwrap();
+    // let edges_with_indices = edges.iter().enumerate().collect::<Vec<_>>();
+    // let a_i = edges_with_indices.iter().find(|e|e.1.0 == "AA").unwrap().0;
+    // let total_pressure =
+    //     // {
+    //     (0..(1 << edges.len())).filter(|i|(i & (1<<a_i)) == 0).map(|i| {
+    //         max_pressure_for(&edges_with_indices.iter().filter(|(ii,e)| e.0 == "AA" || (i & (1<<ii)) == 0).map(|(_,e)|(e.0.clone(), e.1.clone())).collect(), &nodes_map, "AA", 0, 26) +
+    //             max_pressure_for(&edges_with_indices.iter().filter(|(ii,e)| e.0 == "AA" || (i & (1<<ii)) != 0).map(|(_,e)|(e.0.clone(), e.1.clone())).collect(), &nodes_map, "AA", 0, 26)
+    //     }).max().unwrap()
+    // //     max_pressure_for_two(&edges, &nodes_map, ("AA", "AA"), (0, 0), (26, 26))
+    // // }
+    //     ;
     Ok(println!("Total pressure: {}", total_pressure))
     // Ok(println!("Total pressure: {}", total_pressure_2.0 + total_pressure_2.1))
 }
