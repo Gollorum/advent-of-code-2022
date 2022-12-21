@@ -25,6 +25,7 @@ mod day17;
 mod day18;
 mod day19;
 mod day20;
+mod day21;
 
 fn main() {
     // day01::run_sample();
@@ -68,5 +69,7 @@ fn main() {
     // day19::run_sample();
     // day19::run_actual();
     // day20::run_sample();
-    day20::run_actual();
+    // day20::run_actual();
+    // day21::run_sample();
+    day21::run_actual();
 }
