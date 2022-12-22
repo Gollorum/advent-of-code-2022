@@ -56,3 +56,11 @@ impl From<&str> for ErrorMsg {
        ErrorMsg { wrapped: err.to_string() }
     }
 }
+
+#[macro_export] macro_rules! hashmap {
+    ($( $key: expr => $val: expr ),*) => {{
+         let mut map = ::std::collections::HashMap::new();
+         $( map.insert($key, $val); )*
+         map
+    }}
+}
