@@ -79,28 +79,43 @@ fn max_pressure_for(
 
 fn eval_permutation(
     nodes: &Vec<(&Node, Vec<u32>)>,
-    permutation_cache: &mut Vec<Option<(u32, u32, u32)>>,
+    permutation_cache: &mut HashMap<usize, (u32, u32, u32)>,
     permutation: u64,
     max_time: u32
 ) -> (u32, u32, u32) {
-    if let Some(res) = permutation_cache[permutation as usize] {
-        return res;
+    if permutation == 0 {
+        return (0, 0, 0);
+    }
+    if let Some(res) = permutation_cache.get(&(permutation as usize)) {
+        return *res;
     }
     let prev_permutation = permutation >> 4;
     let (prev_time, prev_press, prev_final_flow) = eval_permutation(nodes, permutation_cache, prev_permutation, max_time);
     let last_index = permutation & 0b1111;
     let node = nodes[last_index as usize].0;
-    let prev_last_index = (prev_permutation & 0b1111) as usize;
-    let cost_to_last = nodes[prev_last_index].1[last_index as usize];
-    let time = prev_time + cost_to_last;
+    let prev_last_index = prev_permutation & 0b1111;
+    // println!("{permutation:b}");
+    let cost_to_last = nodes[prev_last_index as usize].1[
+        if prev_last_index == 0 {last_index as usize-1}
+        else {(if last_index > prev_last_index {last_index-1} else {last_index}) as usize - 1
+    }];
+    let time = prev_time + 1 + cost_to_last;
     let pressure = prev_press + cost_to_last * prev_final_flow;
     let final_flow = prev_final_flow + node.flow_rate;
     let res = if time > max_time {
         (max_time, prev_press + prev_final_flow * (max_time-prev_time), prev_final_flow)
     } else {
-        (time, pressure, final_flow)
+        (time, pressure + prev_final_flow, final_flow)
     };
-    permutation_cache[permutation as usize] = Some(res);
+    permutation_cache.insert(permutation as usize, res);
+    // println!(
+    //     "{} releases {}. Finished after {} with {} pressure and {} flow",
+    //     (0..(16-permutation.leading_zeros()/4)).rev().map(|i| nodes[(permutation >> (i*4)) as usize & 0b1111].0.id.clone()).collect::<String>(),
+    //     res.1 + (max_time-res.0)*res.2,
+    //     res.0,
+    //     res.1,
+    //     res.2
+    // );
     res
 }
 
@@ -174,17 +189,19 @@ fn run(path: &str) -> Result<(), ErrorMsg> {
     sorted_nodes.sort();
     let sorted_edges: Vec<(&Node,Vec<u32>)> = sorted_nodes.iter().enumerate().map(|(i, &name)| (
         nodes_map[name],
-        sorted_nodes.iter().enumerate().filter(|&(ii,_)| i != ii).map(|(_,&n)| edges[name][n]).collect()
+        sorted_nodes.iter().enumerate().skip(1).filter(|&(ii,_)| i != ii).map(|(_,&n)| edges[name][n]).collect()
     )).collect();
-    let mut cache = vec![None; 1 << edges.len()];
-    cache[0] = Some((0,0,0));
+    let mut cache = HashMap::new();
+    cache.insert(0, (0,0,0));
+    let max_time = 26;
+    println!("edges: {}", sorted_edges.len());
     let total_pressure = (1..sorted_edges.len()).permutations(sorted_edges.len()-1)
         .map(|p_list| eval_permutation(
             &sorted_edges,
             &mut cache,
             p_list.iter().fold(0, |accum, now| accum << 4 | *now as u64),
-            26
-        ).1).max().unwrap();
+            max_time
+        )).map(|res| res.1 + (max_time-res.0)*res.2).max().unwrap();
     // let edges_with_indices = edges.iter().enumerate().collect::<Vec<_>>();
     // let a_i = edges_with_indices.iter().find(|e|e.1.0 == "AA").unwrap().0;
     // let total_pressure =
