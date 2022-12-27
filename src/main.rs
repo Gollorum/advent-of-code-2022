@@ -65,7 +65,7 @@ fn main() {
     // day15::run_sample();
     // day15::run_actual();
     // day16::run_sample();
-    // day16::run_actual();
+    day16::run_actual();
     // day17::run_sample();
     // day17::run_actual();
     // day18::run_sample();
@@ -83,5 +83,5 @@ fn main() {
     // day24::run_sample();
     // day24::run_actual();
     // day25::run_sample();
-    day25::run_actual();
+    // day25::run_actual();
 }

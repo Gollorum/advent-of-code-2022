@@ -1,10 +1,9 @@
-use std::cmp::{max, min};
+use std::cmp::{min};
 use std::collections::HashMap;
 use std::str::FromStr;
 use crate::utils::ErrorMsg;
 use regex::Regex;
 use crate::utils;
-use itertools::Itertools;
 
 pub fn run_sample() {
     ErrorMsg::print(run("input/day16_sample.txt"));
@@ -35,115 +34,41 @@ impl FromStr for Node {
 }
 
 fn remove_node(edges: &mut HashMap<String,HashMap<String,u32>>, node: &Node) -> () {
-    // for i in 0..node.tunnels.len() {
-    //     if edges.get(node.tunnels[i].as_str()) == None { continue; }
-    //     let cost_from_i = edges.entry(node.tunnels[i].clone()).or_default().remove(node.id.as_str());
-    //     let cost_to_i = edges.get(node.id.as_str()).unwrap().get(node.tunnels[i].as_str()).map(|v| *v);
-    //     for j in (i+1)..node.tunnels.len() {
-    //         if edges.get(node.tunnels[j].as_str()) == None { continue; }
-    //         let cost_from_j = edges.entry(node.tunnels[j].clone()).or_default().get(node.id.as_str()).map(|v| *v);
-    //         let cost_to_j = edges.get(node.id.as_str()).unwrap().get(node.tunnels[j].as_str()).map(|v| *v);
-    //         if cost_from_i != None && cost_to_j != None {
-    //             let e: &mut _ = edges.entry(node.tunnels[i].clone()).or_default().entry(node.tunnels[j].clone()).or_insert(10000);
-    //             *e = min(*e, cost_from_i.unwrap() + cost_to_j.unwrap());
-    //         } else {println!("There was no way from {} to {}", node.tunnels[i], node.tunnels[j])}
-    //         if cost_from_j != None && cost_to_i != None {
-    //             let e: &mut _ = edges.entry(node.tunnels[j].clone()).or_default().entry(node.tunnels[i].clone()).or_insert(10000);
-    //             *e = min(*e, cost_from_j.unwrap() + cost_to_i.unwrap());
-    //         } else {println!("There was no way from {} to {}", node.tunnels[j], node.tunnels[i])}
-    //     }
-    // }
-    // edges.remove(node.id.as_str());
     for to in edges.values_mut() {
         to.remove(node.id.as_str());
     }
 }
 
-fn max_pressure_for(
-    edges: &HashMap<String,HashMap<String,u32>>,
-    nodes: &HashMap<String, &Node>,
-    start: &str,
-    current_flow: u32,
-    minutes_left: u32
-) -> u32 {
-    // println!("All edges: {}", to_str(edges));
-    // println!("Minute {}: Expand {}, edges: {}", 30 - minutes_left+1, start, start_edges.iter().map(|e| format!("{}: {} | ", e.0, e.1)).collect::<String>());
-    edges.get(start).unwrap().iter().filter_map(|e| if  e.1 + 1 > minutes_left || edges.get(e.0) == None { None } else {
-        let mut new_edges = edges.clone();
-        let n = nodes.get(e.0).unwrap();
-        remove_node(&mut new_edges, n);
-        let cost = e.1 + 1;
-        Some(max_pressure_for(&new_edges, nodes, e.0.as_str(), current_flow + n.flow_rate, minutes_left - cost) + cost * current_flow)
-    }).max().unwrap_or(minutes_left * current_flow)
-}
-
-fn eval_permutation(
+fn eval_subset(
+    start: u16,
+    subset: usize,
     nodes: &Vec<(&Node, Vec<u32>)>,
-    permutation_cache: &mut HashMap<usize, (u32, u32, u32)>,
-    permutation: u64,
     max_time: u32
-) -> (u32, u32, u32) {
-    if permutation == 0 {
-        return (0, 0, 0);
-    }
-    if let Some(res) = permutation_cache.get(&(permutation as usize)) {
-        return *res;
-    }
-    let prev_permutation = permutation >> 4;
-    let (prev_time, prev_press, prev_final_flow) = eval_permutation(nodes, permutation_cache, prev_permutation, max_time);
-    let last_index = permutation & 0b1111;
-    let node = nodes[last_index as usize].0;
-    let prev_last_index = prev_permutation & 0b1111;
-    // println!("{permutation:b}");
-    let cost_to_last = nodes[prev_last_index as usize].1[
-        if prev_last_index == 0 {last_index as usize-1}
-        else {(if last_index > prev_last_index {last_index-1} else {last_index}) as usize - 1
-    }];
-    let time = prev_time + 1 + cost_to_last;
-    let pressure = prev_press + cost_to_last * prev_final_flow;
-    let final_flow = prev_final_flow + node.flow_rate;
-    let res = if time > max_time {
-        (max_time, prev_press + prev_final_flow * (max_time-prev_time), prev_final_flow)
-    } else {
-        (time, pressure + prev_final_flow, final_flow)
-    };
-    permutation_cache.insert(permutation as usize, res);
-    // println!(
-    //     "{} releases {}. Finished after {} with {} pressure and {} flow",
-    //     (0..(16-permutation.leading_zeros()/4)).rev().map(|i| nodes[(permutation >> (i*4)) as usize & 0b1111].0.id.clone()).collect::<String>(),
-    //     res.1 + (max_time-res.0)*res.2,
-    //     res.0,
-    //     res.1,
-    //     res.2
-    // );
-    res
+) -> u32 {
+    if subset == 0 { return 0 }
+    (0..(nodes.len()-1))
+        .map(|i| i+1)
+        .filter(|i| ((1 << i) & subset != 0))
+        .filter_map(|i| {
+            let cost = nodes[start as usize].1[
+                if start == 0 {i-1}
+                else {(if i > start as usize {i-1} else {i}) - 1
+            }] + 1;
+            if cost > max_time {
+                None
+            } else {
+                let remaining_time = max_time - cost;
+                let next_node = nodes[i].0;
+                let released_by_this = remaining_time * next_node.flow_rate;
+                let released_later = eval_subset(i as u16, subset & !(1<<i), nodes, remaining_time);
+                // if i == 3 {
+                //     println!("Expanding {i} aka {} at time {} yields {released_by_this} + {released_later}", next_node.id, 30 - remaining_time);
+                // }
+                Some(released_by_this + released_later)
+            }
+        }).max().unwrap_or(0)
 }
 
-fn max_pressure_for_two(
-    edges: &HashMap<String,HashMap<String,u32>>,
-    nodes: &HashMap<String, &Node>,
-    start: (&str, &str),
-    current_flow: (u32, u32),
-    minutes_left: (u32, u32)
-) -> u32 {
-    vec![true, false].iter().filter_map(|&use_left| {
-        let chosen_start = if use_left {start.0} else {start.1};
-        // println!("All edges: {}", to_str(edges));
-        // println!("Minute {}: Expand {}, edges: {}", 30 - if use_left {minutes_left.0} else {minutes_left.1}+1, chosen_start, edges.get(chosen_start).unwrap().iter().map(|e| format!("{}: {} | ", e.0, e.1)).collect::<String>());
-        edges.get(chosen_start).unwrap().iter().filter_map(|e| if e.1 + 1 > if use_left {minutes_left.0} else {minutes_left.1} || edges.get(e.0.as_str()) == None { None } else {
-            let mut new_edges = edges.clone();
-            let chosen_current_flow = if use_left {current_flow.0} else {current_flow.1};
-            let n = nodes.get(e.0.as_str()).unwrap();
-            remove_node(&mut new_edges, n);
-            let cost = e.1 + 1;
-            let new_start = if use_left {(e.0.as_str(),start.1)} else {(start.0,e.0.as_str())};
-            let new_flow = if use_left {(chosen_current_flow + n.flow_rate,current_flow.1)} else {(current_flow.0,chosen_current_flow + n.flow_rate)};
-            let new_minutes_left = if use_left {(minutes_left.0-cost,minutes_left.1)} else {(minutes_left.0,minutes_left.1-cost)};
-            let res = max_pressure_for_two(&new_edges, nodes, new_start, new_flow, new_minutes_left);
-            let to_add = cost * chosen_current_flow;
-            Some(res+to_add)
-    }).max()}).max().unwrap_or(minutes_left.0*current_flow.0 + minutes_left.1*current_flow.1)
-}
 
 fn to_str(edges: &HashMap<String,HashMap<String,u32>>) -> String {
     edges.iter().map(|e| format!("\n{} -> {}", e.0, e.1.iter().map(|ee| ee.0.clone()).collect::<String>())).collect::<String>()
@@ -181,38 +106,19 @@ fn run(path: &str) -> Result<(), ErrorMsg> {
         remove_node(&mut edges, node);
         if node.id != "AA" { edges.remove(node.id.as_str()); }
     }
-    // TODO DS: Total pressure of subgroups in the same order can be cached
-    // TODO DS: Cache max pressure for subgroup / subset?
     println!("All edges: {}", to_str(&edges));
-    // let total_pressure = max_pressure_for(&edges, &nodes_map, "AA", 0, 30);
     let mut sorted_nodes = edges.iter().map(|(name, _)| name).collect::<Vec<_>>();
     sorted_nodes.sort();
     let sorted_edges: Vec<(&Node,Vec<u32>)> = sorted_nodes.iter().enumerate().map(|(i, &name)| (
         nodes_map[name],
         sorted_nodes.iter().enumerate().skip(1).filter(|&(ii,_)| i != ii).map(|(_,&n)| edges[name][n]).collect()
     )).collect();
-    let mut cache = HashMap::new();
-    cache.insert(0, (0,0,0));
     let max_time = 26;
     println!("edges: {}", sorted_edges.len());
-    let total_pressure = (1..sorted_edges.len()).permutations(sorted_edges.len()-1)
-        .map(|p_list| eval_permutation(
-            &sorted_edges,
-            &mut cache,
-            p_list.iter().fold(0, |accum, now| accum << 4 | *now as u64),
-            max_time
-        )).map(|res| res.1 + (max_time-res.0)*res.2).max().unwrap();
-    // let edges_with_indices = edges.iter().enumerate().collect::<Vec<_>>();
-    // let a_i = edges_with_indices.iter().find(|e|e.1.0 == "AA").unwrap().0;
-    // let total_pressure =
-    //     // {
-    //     (0..(1 << edges.len())).filter(|i|(i & (1<<a_i)) == 0).map(|i| {
-    //         max_pressure_for(&edges_with_indices.iter().filter(|(ii,e)| e.0 == "AA" || (i & (1<<ii)) == 0).map(|(_,e)|(e.0.clone(), e.1.clone())).collect(), &nodes_map, "AA", 0, 26) +
-    //             max_pressure_for(&edges_with_indices.iter().filter(|(ii,e)| e.0 == "AA" || (i & (1<<ii)) != 0).map(|(_,e)|(e.0.clone(), e.1.clone())).collect(), &nodes_map, "AA", 0, 26)
-    //     }).max().unwrap()
-    // //     max_pressure_for_two(&edges, &nodes_map, ("AA", "AA"), (0, 0), (26, 26))
-    // // }
-    //     ;
+    let max_subset = (1<<(sorted_edges.len()))-1;
+    let total_pressure = (0..max_subset/2).map(|subset_l|
+        eval_subset(0, subset_l, &sorted_edges, max_time)
+         + eval_subset(0, (!subset_l) & max_subset, &sorted_edges, max_time)
+    ).max().unwrap();
     Ok(println!("Total pressure: {}", total_pressure))
-    // Ok(println!("Total pressure: {}", total_pressure_2.0 + total_pressure_2.1))
 }
