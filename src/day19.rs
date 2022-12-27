@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::collections::HashMap;
 use std::ops::{Add, Sub};
 use crate::utils::ErrorMsg;
@@ -6,7 +7,7 @@ use regex::Regex;
 use crate::utils;
 
 pub fn run_sample() {
-    ErrorMsg::print(run("input/day19_sample.txt", true));
+    ErrorMsg::print(run("input/day19_sample.txt", false));
 }
 
 pub fn run_actual() {
@@ -57,7 +58,8 @@ struct Blueprint {
     clay_robot_cost: Material,
     obsidian_robot_cost: Material,
     geode_robot_cost: Material,
-    expand_options: [(Material, Material); 5]
+    expand_options_including_null: [(Material, Material); 5],
+    expand_options_excluding_null: [(Material, Material); 4]
 }
 impl Blueprint {
     fn new(
@@ -70,12 +72,18 @@ impl Blueprint {
         clay_robot_cost,
         obsidian_robot_cost,
         geode_robot_cost,
-        expand_options: [
+        expand_options_including_null: [
             (ore_robot_cost, Material{ore: 1, ..Default::default()}),
             (clay_robot_cost, Material{clay: 1, ..Default::default()}),
             (obsidian_robot_cost, Material{obsidian: 1, ..Default::default()}),
             (geode_robot_cost, Material{geode: 1, ..Default::default()}),
             (Material{..Default::default()}, Material{..Default::default()})
+        ],
+        expand_options_excluding_null: [
+            (ore_robot_cost, Material{ore: 1, ..Default::default()}),
+            (clay_robot_cost, Material{clay: 1, ..Default::default()}),
+            (obsidian_robot_cost, Material{obsidian: 1, ..Default::default()}),
+            (geode_robot_cost, Material{geode: 1, ..Default::default()})
         ]
     }}
 }
@@ -100,7 +108,11 @@ fn max_geodes_for(blueprint: &Blueprint, current_materials: Material, current_ro
     if let Some(res) = cache.get(&(current_materials.except_geodes(), current_robots.except_geodes(), time_left)) {
         return *res + current_materials.geode + current_robots.geode * time_left
     }
-    let res = blueprint.expand_options.iter().filter(|(cost,_)| cost.ore<=current_materials.ore && cost.clay<=current_materials.clay && cost.obsidian<=current_materials.obsidian)
+    let res = (if current_materials.ore >= blueprint.expand_options_excluding_null.iter().map(|(c,_)| c.ore).max().unwrap() {
+        blueprint.expand_options_excluding_null.iter()
+    } else {
+        blueprint.expand_options_including_null.iter()
+    }).filter(|(cost,_)| cost.ore<=current_materials.ore && cost.clay<=current_materials.clay && cost.obsidian<=current_materials.obsidian)
         .map(|&(cost, gain)| max_geodes_for(
             blueprint,
             current_materials + current_robots - cost,
@@ -130,10 +142,9 @@ fn run(path: &str, part2: bool) -> Result<(), ErrorMsg> {
         }
         Ok(println!("Result: {sum}"))
     } else {
-        let reduced_blueprints = blueprints.iter().take(3).collect::<Vec<_>>();
         let mut prod = 1;
-        for (i, blueprint) in reduced_blueprints.iter().enumerate() {
-            println!("STarting blueprint {i}");
+        for blueprint in blueprints.iter().take(3) {
+            println!("STarting blueprint");
             let max_geodes = max_geodes_for(
                 blueprint,
                 Material { ..Default::default() },

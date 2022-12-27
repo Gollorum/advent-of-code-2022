@@ -65,13 +65,13 @@ fn main() {
     // day15::run_sample();
     // day15::run_actual();
     // day16::run_sample();
-    day16::run_actual();
+    // day16::run_actual();
     // day17::run_sample();
     // day17::run_actual();
     // day18::run_sample();
     // day18::run_actual();
     // day19::run_sample();
-    // day19::run_actual();
+    day19::run_actual();
     // day20::run_sample();
     // day20::run_actual();
     // day21::run_sample();
